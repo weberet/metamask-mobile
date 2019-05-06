@@ -59,18 +59,12 @@ import TabCountIcon from '../../UI/Tabs/TabCountIcon';
 const HOMEPAGE_URL = 'about:blank';
 const SUPPORTED_TOP_LEVEL_DOMAINS = ['eth', 'test'];
 const BOTTOM_NAVBAR_HEIGHT = Platform.OS === 'ios' && DeviceSize.isIphoneX() ? 86 : 60;
+const MIN_HEIGHT = Dimensions.get('window').height - BOTTOM_NAVBAR_HEIGHT;
+const MAX_HEIGHT = Dimensions.get('window').height;
 
 const styles = StyleSheet.create({
 	wrapper: {
-		...baseStyles.flexGrow,
-		backgroundColor: colors.white
-	},
-	hide: {
-		flex: 0,
-		opacity: 0,
-		display: 'none',
-		width: 0,
-		height: 0
+		...baseStyles.flexGrow
 	},
 	icon: {
 		color: colors.grey500,
@@ -160,7 +154,6 @@ const styles = StyleSheet.create({
 		paddingTop: Platform.OS === 'ios' && DeviceSize.isIphoneX() ? 15 : 12,
 		paddingBottom: Platform.OS === 'ios' && DeviceSize.isIphoneX() ? 32 : 8,
 		flexDirection: 'row',
-		paddingHorizontal: 10,
 		flex: 1
 	},
 	iconSearch: {
@@ -396,7 +389,8 @@ export class BrowserTab extends PureComponent {
 			forceReload: false,
 			suggestedAssetMeta: undefined,
 			watchAsset: false,
-			activated: props.id === props.activeTab
+			activated: props.id === props.activeTab,
+			height: new Animated.Value(0)
 		};
 	}
 
@@ -1702,48 +1696,69 @@ export class BrowserTab extends PureComponent {
 
 	render() {
 		const { entryScriptWeb3, url, forceReload, activated } = this.state;
+		const { clampedScroll } = this.state;
 
 		const canGoBackIOS = Platform.OS === 'ios' && url === HOMEPAGE_URL ? false : this.canGoBack();
 		const canGoForward = this.canGoForward();
 
 		const isHidden = !this.isTabActive();
 
+		const browserPosition = clampedScroll.interpolate({
+			inputRange: [0, BOTTOM_NAVBAR_HEIGHT],
+			outputRange: [1 - BOTTOM_NAVBAR_HEIGHT / 2, 0],
+			extrapolate: 'clamp'
+		});
+
+		const heightt = clampedScroll.interpolate({
+			inputRange: [0, BOTTOM_NAVBAR_HEIGHT],
+			outputRange: [MIN_HEIGHT / MAX_HEIGHT, 1]
+		});
+
 		return (
-			<View
-				style={[styles.wrapper, isHidden && styles.hide]}
-				{...(Platform.OS === 'android' ? { collapsable: false } : {})}
-			>
-				{activated && !forceReload && (
-					<Web3Webview
-						injectedOnStartLoadingJavaScript={entryScriptWeb3}
-						onProgress={this.onLoadProgress}
-						onLoadStart={this.onLoadStart}
-						onLoadEnd={this.onLoadEnd}
-						onMessage={this.onMessage}
-						onNavigationStateChange={this.onPageChange}
-						ref={this.webview}
-						source={{ uri: url }}
-						style={styles.webview}
-						onScroll={this.handleScroll}
-						onMomentumScrollBegin={this.onMomentumScrollBegin}
-						scrollEventThrottle={1}
-						userAgent={this.getUserAgent()}
-						sendCookies
-						javascriptEnabled
-					/>
-				)}
-				{this.renderProgressBar()}
-				{!isHidden && url === HOMEPAGE_URL ? (
-					<View style={styles.homepage}>
-						<BrowserHome goToUrl={this.go} navigation={this.props.navigation} />
-					</View>
-				) : null}
-				{!isHidden && this.renderUrlModal()}
-				{!isHidden && this.renderSigningModal()}
-				{!isHidden && this.renderApprovalModal()}
-				{!isHidden && this.renderPhishingModal()}
-				{!isHidden && this.renderWatchAssetModal()}
-				{!isHidden && this.renderOptions()}
+			<View style={styles.wrapper}>
+				<Animated.View
+					style={{
+						...styles.wrapper,
+						...{ transform: [{ scaleY: heightt }, { translateY: browserPosition }] }
+					}}
+					{...(Platform.OS === 'android' ? { collapsable: false } : {})}
+					na
+				>
+					{activated && !forceReload && (
+						<View style={styles.wrapper}>
+							<Web3Webview
+								injectedOnStartLoadingJavaScript={entryScriptWeb3}
+								onProgress={this.onLoadProgress}
+								onLoadStart={this.onLoadStart}
+								onLoadEnd={this.onLoadEnd}
+								onMessage={this.onMessage}
+								onNavigationStateChange={this.onPageChange}
+								ref={this.webview}
+								source={{ uri: url }}
+								style={styles.webview}
+								onScroll={this.handleScroll}
+								onMomentumScrollBegin={this.onMomentumScrollBegin}
+								scrollEventThrottle={1}
+								userAgent={this.getUserAgent()}
+								sendCookies
+								automaticallyAdjustContentInsets
+								javascriptEnabled
+							/>
+						</View>
+					)}
+					{this.renderProgressBar()}
+					{!isHidden && url === HOMEPAGE_URL ? (
+						<View style={styles.homepage}>
+							<BrowserHome goToUrl={this.go} navigation={this.props.navigation} />
+						</View>
+					) : null}
+					{!isHidden && this.renderUrlModal()}
+					{!isHidden && this.renderSigningModal()}
+					{!isHidden && this.renderApprovalModal()}
+					{!isHidden && this.renderPhishingModal()}
+					{!isHidden && this.renderWatchAssetModal()}
+					{!isHidden && this.renderOptions()}
+				</Animated.View>
 				{!isHidden && Platform.OS === 'ios' ? this.renderBottomBar(canGoBackIOS, canGoForward) : null}
 			</View>
 		);
