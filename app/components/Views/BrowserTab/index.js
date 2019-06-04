@@ -13,7 +13,8 @@ import {
 	TouchableOpacity,
 	Linking,
 	Keyboard,
-	BackHandler
+	BackHandler,
+	LayoutAnimation
 } from 'react-native';
 import { withNavigation } from 'react-navigation';
 import Web3Webview from 'react-native-web3-webview';
@@ -30,7 +31,7 @@ import Engine from '../../../core/Engine';
 import PhishingModal from '../../UI/PhishingModal';
 import WebviewProgressBar from '../../UI/WebviewProgressBar';
 import BrowserHome from '../../Views/BrowserHome';
-import { colors, baseStyles, fontStyles } from '../../../styles/common';
+import { colors, fontStyles } from '../../../styles/common';
 import Networks from '../../../util/networks';
 import Logger from '../../../util/Logger';
 import onUrlSubmit, { getHost } from '../../../util/browser';
@@ -59,13 +60,9 @@ import TabCountIcon from '../../UI/Tabs/TabCountIcon';
 const HOMEPAGE_URL = 'about:blank';
 const SUPPORTED_TOP_LEVEL_DOMAINS = ['eth', 'test'];
 const BOTTOM_NAVBAR_HEIGHT = Platform.OS === 'ios' && DeviceSize.isIphoneX() ? 86 : 60;
-const MIN_HEIGHT = Dimensions.get('window').height - BOTTOM_NAVBAR_HEIGHT;
 const MAX_HEIGHT = Dimensions.get('window').height;
 
 const styles = StyleSheet.create({
-	wrapper: {
-		...baseStyles.flexGrow
-	},
 	icon: {
 		color: colors.grey500,
 		height: 28,
@@ -141,9 +138,6 @@ const styles = StyleSheet.create({
 		marginRight: 10,
 		textAlign: 'center',
 		alignSelf: 'center'
-	},
-	webview: {
-		...baseStyles.flexGrow
 	},
 	bottomBar: {
 		backgroundColor: colors.grey000,
@@ -390,12 +384,15 @@ export class BrowserTab extends PureComponent {
 			suggestedAssetMeta: undefined,
 			watchAsset: false,
 			activated: props.id === props.activeTab,
-			height: new Animated.Value(0)
+			height: new Animated.Value(0),
+			flex: MAX_HEIGHT - 2 * BOTTOM_NAVBAR_HEIGHT
 		};
 	}
 
 	webview = React.createRef();
 	inputRef = React.createRef();
+	main = React.createRef();
+	bottomBar = React.createRef();
 	timeoutHandler = null;
 	snapshotTimer = null;
 	prevScrollOffset = 0;
@@ -435,6 +432,7 @@ export class BrowserTab extends PureComponent {
 		if (this.state.url !== HOMEPAGE_URL && Platform.OS === 'android' && this.isTabActive()) {
 			this.reload();
 		}
+
 		this.mounted = true;
 		this.backgroundBridge = new BackgroundBridge(Engine, this.webview, {
 			eth_requestAccounts: ({ hostname, params }) => {
@@ -593,7 +591,6 @@ export class BrowserTab extends PureComponent {
 				this.scrollValue = value;
 				this.clampedScrollValue = Math.min(Math.max(this.clampedScrollValue + diff, 0), BOTTOM_NAVBAR_HEIGHT);
 			});
-
 			this.state.offsetAnim.addListener(({ value }) => {
 				this.offsetValue = value;
 			});
@@ -675,6 +672,7 @@ export class BrowserTab extends PureComponent {
 	componentDidUpdate(prevProps) {
 		const prevNavigation = prevProps.navigation;
 		const { navigation } = this.props;
+		LayoutAnimation.configureNext(LayoutAnimation.Presets.linear);
 
 		// If tab wasn't activated and we detect an tab change
 		// we need to check if it's time to activate the tab
@@ -1096,6 +1094,14 @@ export class BrowserTab extends PureComponent {
 				offsetAnim,
 				clampedScroll
 			});
+
+		const bottomBarPosition = this.state.clampedScroll.interpolate({
+			inputRange: [0, BOTTOM_NAVBAR_HEIGHT],
+			outputRange: [0, BOTTOM_NAVBAR_HEIGHT],
+			extrapolate: 'clamp'
+		});
+
+		this.main.setNativeProps({ transform: [{ translateY: bottomBarPosition }] });
 	}
 
 	onPageChange = ({ url }) => {
@@ -1308,6 +1314,20 @@ export class BrowserTab extends PureComponent {
 	handleScroll = e => {
 		if (Platform.OS === 'android') return;
 
+		const newOffset = e.contentOffset.y;
+
+		const rest = Math.abs(this.scrollValue - newOffset);
+		const s = MAX_HEIGHT - BOTTOM_NAVBAR_HEIGHT;
+		const g = MAX_HEIGHT - 2 * BOTTOM_NAVBAR_HEIGHT;
+		if (
+			rest < BOTTOM_NAVBAR_HEIGHT &&
+			this.state.flex - (this.scrollValue - newOffset) < s &&
+			this.state.flex - (this.scrollValue - newOffset) > g &&
+			newOffset > -1
+		) {
+			//this.main.setNativeProps({ height: this.state.flex - (this.scrollValue - newOffset) });
+			//this.setState({flex: this.state.flex -( this.scrollValue - newOffset)})
+		}
 		if (e.contentSize.height < Dimensions.get('window').height) {
 			return;
 		}
@@ -1315,8 +1335,6 @@ export class BrowserTab extends PureComponent {
 		if (this.state.progress < 1) {
 			return;
 		}
-
-		const newOffset = e.contentOffset.y;
 
 		// Avoid wrong position at the beginning
 		if ((this.state.scrollAnim._value === 0 && newOffset > BOTTOM_NAVBAR_HEIGHT) || newOffset <= 0) {
@@ -1331,7 +1349,7 @@ export class BrowserTab extends PureComponent {
 
 		this.scrollStopTimer = setTimeout(() => {
 			if (Math.abs(this.scrollValue - newOffset) > 1) {
-				this.onScrollStop();
+				this.onScrollStop(newOffset);
 			}
 		}, 200);
 	};
@@ -1341,13 +1359,13 @@ export class BrowserTab extends PureComponent {
 		clearTimeout(this.scrollStopTimer);
 	};
 
-	onScrollStop = () => {
+	onScrollStop = newOffset => {
 		if (Platform.OS === 'android') return;
 		const toValue =
 			this.clampedScrollValue > BOTTOM_NAVBAR_HEIGHT / 2
 				? this.offsetValue + BOTTOM_NAVBAR_HEIGHT
 				: this.offsetValue - BOTTOM_NAVBAR_HEIGHT;
-
+		this.scrollValue = newOffset;
 		this.animateBottomNavbar(toValue);
 	};
 
@@ -1373,7 +1391,10 @@ export class BrowserTab extends PureComponent {
 		});
 
 		return (
-			<Animated.View style={[styles.bottomBar, { transform: [{ translateY: bottomBarPosition }] }]}>
+			<Animated.View
+				style={[styles.bottomBar, { transform: [{ translateY: bottomBarPosition }] }]}
+				ref={this.bottomBar}
+			>
 				<View style={styles.iconsLeft}>
 					<Icon
 						name="angle-left"
@@ -1694,58 +1715,47 @@ export class BrowserTab extends PureComponent {
 		return activeTab === id;
 	};
 
+	animVal = new Animated.Value(0);
+
+	interpolateBar = this.animVal.interpolate({ inputRange: [0, 1], outputRange: ['100%', '90%'] });
+	animatedTransition = Animated.spring(this.animVal, { toValue: 1 });
+
 	render() {
 		const { entryScriptWeb3, url, forceReload, activated } = this.state;
-		const { clampedScroll } = this.state;
 
 		const canGoBackIOS = Platform.OS === 'ios' && url === HOMEPAGE_URL ? false : this.canGoBack();
 		const canGoForward = this.canGoForward();
 
 		const isHidden = !this.isTabActive();
 
-		const browserPosition = clampedScroll.interpolate({
-			inputRange: [0, BOTTOM_NAVBAR_HEIGHT],
-			outputRange: [1 - BOTTOM_NAVBAR_HEIGHT / 2, 0],
-			extrapolate: 'clamp'
-		});
-
-		const heightt = clampedScroll.interpolate({
-			inputRange: [0, BOTTOM_NAVBAR_HEIGHT],
-			outputRange: [MIN_HEIGHT / MAX_HEIGHT, 1]
-		});
-
 		return (
-			<View style={styles.wrapper}>
+			<View style={[]}>
 				<Animated.View
 					style={{
-						...styles.wrapper,
-						...{ transform: [{ scaleY: heightt }, { translateY: browserPosition }] }
+						height: this.state.flex
 					}}
-					{...(Platform.OS === 'android' ? { collapsable: false } : {})}
-					na
+					//ref={component => { this.main = component}}
 				>
 					{activated && !forceReload && (
-						<View style={styles.wrapper}>
-							<Web3Webview
-								injectedOnStartLoadingJavaScript={entryScriptWeb3}
-								onProgress={this.onLoadProgress}
-								onLoadStart={this.onLoadStart}
-								onLoadEnd={this.onLoadEnd}
-								onMessage={this.onMessage}
-								onNavigationStateChange={this.onPageChange}
-								ref={this.webview}
-								source={{ uri: url }}
-								style={styles.webview}
-								onScroll={this.handleScroll}
-								onMomentumScrollBegin={this.onMomentumScrollBegin}
-								scrollEventThrottle={1}
-								userAgent={this.getUserAgent()}
-								sendCookies
-								automaticallyAdjustContentInsets
-								javascriptEnabled
-							/>
-						</View>
+						<Web3Webview
+							injectedOnStartLoadingJavaScript={entryScriptWeb3}
+							onProgress={this.onLoadProgress}
+							onLoadStart={this.onLoadStart}
+							onLoadEnd={this.onLoadEnd}
+							onMessage={this.onMessage}
+							onNavigationStateChange={this.onPageChange}
+							ref={this.webview}
+							source={{ uri: url }}
+							onScroll={this.handleScroll}
+							onMomentumScrollBegin={this.onMomentumScrollBegin}
+							scrollEventThrottle={1}
+							userAgent={this.getUserAgent()}
+							sendCookies
+							automaticallyAdjustContentInsets
+							javascriptEnabled
+						/>
 					)}
+
 					{this.renderProgressBar()}
 					{!isHidden && url === HOMEPAGE_URL ? (
 						<View style={styles.homepage}>
