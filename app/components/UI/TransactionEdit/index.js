@@ -4,7 +4,7 @@ import AccountSelect from '../AccountSelect';
 import ActionView from '../ActionView';
 import EthInput from '../EthInput';
 import PropTypes from 'prop-types';
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Dimensions } from 'react-native';
 import { colors, fontStyles } from '../../../styles/common';
 import { connect } from 'react-redux';
 import { toBN, isBN, hexToBN, fromWei, fromTokenMinimalUnit } from '../../../util/number';
@@ -19,39 +19,10 @@ const styles = StyleSheet.create({
 		flex: 1
 	},
 	formRow: {
-		flexDirection: 'row'
-	},
-	fromRow: {
-		marginRight: 0,
-		position: 'absolute',
-		zIndex: 5,
-		right: 15,
-		left: 15,
-		marginTop: 30
-	},
-	toRow: {
-		right: 15,
-		left: 15,
-		marginTop: Platform.OS === 'android' ? 125 : 120,
-		position: 'absolute',
-		zIndex: 4
-	},
-	row: {
-		marginTop: 18,
-		zIndex: 3
-	},
-	amountRow: {
-		right: 15,
-		left: 15,
-		marginTop: Platform.OS === 'android' ? 205 : 190,
-		position: 'absolute',
-		zIndex: 4
-	},
-	notAbsolute: {
-		marginTop: Platform.OS === 'android' ? 270 : 240
+		flexDirection: 'row',
+		marginTop: 18
 	},
 	label: {
-		flex: 0,
 		paddingRight: 18,
 		width: 106
 	},
@@ -84,7 +55,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		padding: 16,
 		flexDirection: 'column',
-		minHeight: '100%'
+		height: Dimensions.get('window').height
 	},
 	hexData: {
 		...fontStyles.bold,
@@ -97,6 +68,12 @@ const styles = StyleSheet.create({
 		minHeight: 64,
 		paddingLeft: 10,
 		paddingVertical: 6
+	},
+	ethInput: {
+		zIndex: 2
+	},
+	customGas: {
+		zIndex: 1
 	}
 });
 
@@ -360,27 +337,13 @@ class TransactionEdit extends Component {
 					keyboardShouldPersistTaps={'handled'}
 				>
 					<View style={styles.form}>
-						<View style={[styles.formRow, styles.fromRow]}>
+						<View style={styles.formRow}>
 							<View style={styles.label}>
 								<Text style={styles.labelText}>{strings('transaction.from')}:</Text>
 							</View>
 							<AccountSelect value={from} onChange={this.updateFromAddress} enabled={false} />
 						</View>
-						<View style={[styles.formRow, styles.row, styles.amountRow]}>
-							{this.renderAmountLabel()}
-							<EthInput
-								onChange={this.updateAmount}
-								value={value}
-								asset={selectedAsset}
-								handleUpdateAsset={this.props.handleUpdateAsset}
-								readableValue={readableValue}
-								fillMax={this.state.fillMax}
-								updateFillMax={this.updateFillMax}
-								openEthInput={this.openEthInputIsOpen}
-								isOpen={ethInputIsOpen}
-							/>
-						</View>
-						<View style={[styles.formRow, styles.toRow]}>
+						<View style={styles.formRow}>
 							<View style={styles.label}>
 								<Text style={styles.labelText}>{strings('transaction.to')}:</Text>
 								{toAddressError ? <Text style={styles.error}>{toAddressError}</Text> : null}
@@ -403,7 +366,21 @@ class TransactionEdit extends Component {
 								isOpen={accountSelectIsOpen}
 							/>
 						</View>
-						<View style={[styles.formRow, styles.row, styles.notAbsolute]}>
+						<View style={[styles.formRow, styles.ethInput]}>
+							{this.renderAmountLabel()}
+							<EthInput
+								onChange={this.updateAmount}
+								value={value}
+								asset={selectedAsset}
+								handleUpdateAsset={this.props.handleUpdateAsset}
+								readableValue={readableValue}
+								fillMax={this.state.fillMax}
+								updateFillMax={this.updateFillMax}
+								openEthInput={this.openEthInputIsOpen}
+								isOpen={ethInputIsOpen}
+							/>
+						</View>
+						<View style={[styles.formRow, styles.customGas]}>
 							<View style={styles.label}>
 								<Text style={styles.labelText}>{strings('transaction.gas_fee')}:</Text>
 								{gasError ? <Text style={styles.error}>{gasError}</Text> : null}
@@ -416,7 +393,7 @@ class TransactionEdit extends Component {
 								onPress={this.closeDropdowns}
 							/>
 						</View>
-						<View style={[styles.formRow, styles.row]}>
+						<View style={styles.formRow}>
 							{showHexData && (
 								<View style={styles.label}>
 									<Text style={styles.labelText}>{strings('transaction.hex_data')}:</Text>

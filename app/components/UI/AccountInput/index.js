@@ -35,7 +35,9 @@ const styles = StyleSheet.create({
 	input: {
 		...fontStyles.bold,
 		backgroundColor: colors.white,
-		marginRight: 24
+		marginRight: 24,
+		paddingLeft: 0,
+		minWidth: 120
 	},
 	qrCodeButton: {
 		minHeight: Platform.OS === 'android' ? 50 : 50,
@@ -46,7 +48,6 @@ const styles = StyleSheet.create({
 		alignItems: 'center'
 	},
 	accountContainer: {
-		flex: 1,
 		flexDirection: 'row',
 		backgroundColor: colors.white,
 		borderColor: colors.grey100,

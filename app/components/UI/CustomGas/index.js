@@ -26,7 +26,6 @@ const styles = StyleSheet.create({
 		borderColor: colors.grey100,
 		borderRadius: 4,
 		borderWidth: 1,
-		flex: 1,
 		position: 'relative',
 		flexDirection: 'row',
 		justifyContent: 'space-evenly'
