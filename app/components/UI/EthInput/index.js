@@ -122,7 +122,6 @@ const styles = StyleSheet.create({
 		flex: 1
 	},
 	elevatedView: {
-		position: 'absolute',
 		zIndex: 11
 	}
 });
@@ -370,24 +369,22 @@ class EthInput extends Component {
 		};
 		const assetsList = assetsLists[assetType]();
 		return (
-			<View>
-				<ElevatedView borderRadius={4} elevation={10} style={styles.elevatedView}>
-					<ScrollView style={styles.componentContainer} keyboardShouldPersistTaps={'handled'}>
-						<View style={styles.optionList}>
-							{assetsList.map(asset => (
-								<View
-									key={asset.address + asset.tokenId || asset.symbol || undefined}
-									style={styles.selectableAsset}
-								>
-									{this.renderAsset(asset, async () => {
-										await this.selectAsset(asset);
-									})}
-								</View>
-							))}
-						</View>
-					</ScrollView>
-				</ElevatedView>
-			</View>
+			<ElevatedView borderRadius={4} elevation={10} style={styles.elevatedView}>
+				<ScrollView style={styles.componentContainer} keyboardShouldPersistTaps={'handled'}>
+					<View style={styles.optionList}>
+						{assetsList.map(asset => (
+							<View
+								key={asset.address + asset.tokenId || asset.symbol || undefined}
+								style={styles.selectableAsset}
+							>
+								{this.renderAsset(asset, async () => {
+									await this.selectAsset(asset);
+								})}
+							</View>
+						))}
+					</View>
+				</ScrollView>
+			</ElevatedView>
 		);
 	};
 
@@ -672,7 +669,7 @@ class EthInput extends Component {
 		const { isOpen } = this.props;
 		const selectAssets = assets && assets.length > 1;
 		return (
-			<View style={styles.root}>
+			<View style={[styles.root]}>
 				<View style={styles.wrapper}>{this.renderInput()}</View>
 				{selectAssets && isOpen && this.renderAssetsList()}
 			</View>

@@ -4,7 +4,7 @@ import AccountSelect from '../AccountSelect';
 import ActionView from '../ActionView';
 import EthInput from '../EthInput';
 import PropTypes from 'prop-types';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, Dimensions } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors, fontStyles } from '../../../styles/common';
 import { connect } from 'react-redux';
 import { toBN, isBN, hexToBN, fromWei, fromTokenMinimalUnit } from '../../../util/number';
@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
 	},
 	formRow: {
 		flexDirection: 'row',
-		marginTop: 18
+		marginVertical: 9
 	},
 	label: {
 		paddingRight: 18,
@@ -54,8 +54,7 @@ const styles = StyleSheet.create({
 	form: {
 		flex: 1,
 		padding: 16,
-		flexDirection: 'column',
-		height: Dimensions.get('window').height
+		flexDirection: 'column'
 	},
 	hexData: {
 		...fontStyles.bold,
@@ -74,6 +73,9 @@ const styles = StyleSheet.create({
 	},
 	customGas: {
 		zIndex: 1
+	},
+	toRow: {
+		zIndex: 3
 	}
 });
 
@@ -343,7 +345,7 @@ class TransactionEdit extends Component {
 							</View>
 							<AccountSelect value={from} onChange={this.updateFromAddress} enabled={false} />
 						</View>
-						<View style={styles.formRow}>
+						<View style={[styles.formRow, styles.toRow]}>
 							<View style={styles.label}>
 								<Text style={styles.labelText}>{strings('transaction.to')}:</Text>
 								{toAddressError ? <Text style={styles.error}>{toAddressError}</Text> : null}
