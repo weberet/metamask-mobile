@@ -50,5 +50,9 @@
 		"name": "KudosToken",
 		"tradable": true,
 		"method": "transferFrom"
+	},
+	"0xBd13e53255eF917DA7557db1B7D2d5C38a2EFe24": {
+		"name": "DozerDoll",
+		"tradable": false
 	}
 }
