@@ -1,18 +1,12 @@
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
-import { Alert, Image, TouchableOpacity, StyleSheet, Text, View } from 'react-native';
-import TokenImage from '../TokenImage';
+import { Alert, TouchableOpacity, StyleSheet, Text, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, fontStyles } from '../../../styles/common';
 import { strings } from '../../../../locales/i18n';
-import contractMap from 'eth-contract-metadata';
 import ActionSheet from 'react-native-actionsheet';
-import { renderFromTokenMinimalUnit, balanceToFiat } from '../../../util/number';
 import Engine from '../../../core/Engine';
-import AssetElement from '../AssetElement';
-import FadeIn from 'react-native-fade-in-image';
-import { toChecksumAddress } from 'ethereumjs-util';
-import { connect } from 'react-redux';
+import TokenElement from './TokenElement';
 
 const styles = StyleSheet.create({
 	wrapper: {
@@ -45,26 +39,6 @@ const styles = StyleSheet.create({
 	footer: {
 		flex: 1,
 		paddingBottom: 30
-	},
-	balances: {
-		flex: 1,
-		justifyContent: 'center'
-	},
-	balance: {
-		fontSize: 16,
-		color: colors.fontPrimary,
-		...fontStyles.normal
-	},
-	balanceFiat: {
-		fontSize: 12,
-		color: colors.fontSecondary,
-		...fontStyles.normal
-	},
-	ethLogo: {
-		width: 50,
-		height: 50,
-		overflow: 'hidden',
-		marginRight: 20
 	}
 });
 
@@ -73,7 +47,7 @@ const ethLogo = require('../../../images/eth-logo.png'); // eslint-disable-line
 /**
  * View that renders a list of ERC-20 Tokens
  */
-class Tokens extends PureComponent {
+export default class Tokens extends PureComponent {
 	static propTypes = {
 		/**
 		 * Navigation object required to push
@@ -85,29 +59,9 @@ class Tokens extends PureComponent {
 		 */
 		tokens: PropTypes.array,
 		/**
-		 * ETH to current currency conversion rate
-		 */
-		conversionRate: PropTypes.number,
-		/**
-		 * Currency code of the currently-active currency
-		 */
-		currentCurrency: PropTypes.string,
-		/**
-		 * Object containing token balances in the format address => balance
-		 */
-		tokenBalances: PropTypes.object,
-		/**
-		 * Object containing token exchange rates in the format address => exchangeRate
-		 */
-		tokenExchangeRates: PropTypes.object,
-		/**
 		 * Array of transactions
 		 */
-		transactions: PropTypes.array,
-		/**
-		 * Primary currency, either ETH or Fiat
-		 */
-		primaryCurrency: PropTypes.string
+		transactions: PropTypes.array
 	};
 
 	actionSheet = null;
@@ -133,57 +87,16 @@ class Tokens extends PureComponent {
 		</View>
 	);
 
-	renderItem = asset => {
-		const { conversionRate, currentCurrency, tokenBalances, tokenExchangeRates, primaryCurrency } = this.props;
-		const itemAddress = (asset.address && toChecksumAddress(asset.address)) || undefined;
-		const logo = asset.logo || ((contractMap[itemAddress] && contractMap[itemAddress].logo) || undefined);
-		const exchangeRate = itemAddress in tokenExchangeRates ? tokenExchangeRates[itemAddress] : undefined;
-		const balance =
-			asset.balance ||
-			(itemAddress in tokenBalances ? renderFromTokenMinimalUnit(tokenBalances[itemAddress], asset.decimals) : 0);
-		const balanceFiat = asset.balanceFiat || balanceToFiat(balance, conversionRate, exchangeRate, currentCurrency);
-		const balanceValue = balance + ' ' + asset.symbol;
-
-		// render balances according to primary currency
-		let mainBalance, secondaryBalance;
-		if (primaryCurrency === 'ETH') {
-			mainBalance = balanceValue;
-			secondaryBalance = balanceFiat;
-		} else {
-			mainBalance = !balanceFiat ? balanceValue : balanceFiat;
-			secondaryBalance = !balanceFiat ? balanceFiat : balanceValue;
-		}
-
-		asset = { ...asset, ...{ logo, balance, balanceFiat } };
-		return (
-			<AssetElement
-				key={itemAddress || '0x'}
-				onPress={this.onItemPress}
-				onLongPress={this.showRemoveMenu}
-				asset={asset}
-			>
-				{asset.isETH ? (
-					<FadeIn placeholderStyle={{ backgroundColor: colors.white }}>
-						<Image source={ethLogo} style={styles.ethLogo} />
-					</FadeIn>
-				) : (
-					<TokenImage asset={asset} containerStyle={styles.ethLogo} />
-				)}
-
-				<View style={styles.balances}>
-					<Text style={styles.balance}>{mainBalance}</Text>
-					{secondaryBalance ? <Text style={styles.balanceFiat}>{secondaryBalance}</Text> : null}
-				</View>
-			</AssetElement>
-		);
-	};
+	renderItem = (asset, key) => (
+		<TokenElement key={key} asset={asset} onPress={this.onItemPress} onLongPress={this.showRemoveMenu} />
+	);
 
 	renderList() {
 		const { tokens } = this.props;
 
 		return (
 			<View>
-				{tokens.map(item => this.renderItem(item))}
+				{tokens.map((item, i) => this.renderItem(item, i))}
 				{this.renderFooter()}
 			</View>
 		);
@@ -227,13 +140,3 @@ class Tokens extends PureComponent {
 		);
 	};
 }
-
-const mapStateToProps = state => ({
-	currentCurrency: state.engine.backgroundState.CurrencyRateController.currentCurrency,
-	conversionRate: state.engine.backgroundState.CurrencyRateController.conversionRate,
-	primaryCurrency: state.settings.primaryCurrency,
-	tokenBalances: state.engine.backgroundState.TokenBalancesController.contractBalances,
-	tokenExchangeRates: state.engine.backgroundState.TokenRatesController.contractExchangeRates
-});
-
-export default connect(mapStateToProps)(Tokens);
