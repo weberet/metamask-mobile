@@ -448,9 +448,14 @@ class PaymentChannel extends PureComponent {
 		}
 
 		try {
+			let sendAmount = this.state.sendAmount;
+			// Hack to deal with other locales
+			if (sendAmount.indexOf(',') !== -1) {
+				sendAmount = sendAmount.replace(',', '.');
+			}
 			const params = {
 				sendRecipient: this.state.sendRecipient,
-				sendAmount: this.state.sendAmount
+				sendAmount
 			};
 
 			if (isNaN(params.sendAmount) || params.sendAmount.trim() === '') {

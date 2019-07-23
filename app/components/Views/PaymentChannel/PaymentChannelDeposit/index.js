@@ -252,8 +252,12 @@ class Deposit extends PureComponent {
 
 	validateDeposit = async () => {
 		const { selectedAddress, accounts } = this.props;
-		const { amount } = this.state;
+		let { amount } = this.state;
 		if (!amount) return;
+		// Hack to deal with other locales
+		if (amount.indexOf(',') !== -1) {
+			amount = amount.replace(',', '.');
+		}
 		const { balance } = accounts[selectedAddress];
 		let error, invalidAmountType;
 		let validAmount = true;

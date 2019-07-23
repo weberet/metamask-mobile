@@ -91,9 +91,15 @@ class PaymentChannelSend extends PureComponent {
 		}
 
 		try {
+			let sendAmount = transaction.readableValue;
+			// Hack to deal with other locales
+			if (sendAmount.indexOf(',') !== -1) {
+				sendAmount = sendAmount.replace(',', '.');
+			}
+
 			const params = {
 				sendRecipient: transaction.to,
-				sendAmount: transaction.readableValue
+				sendAmount
 			};
 
 			if (isNaN(params.sendAmount) || params.sendAmount.trim() === '') {
