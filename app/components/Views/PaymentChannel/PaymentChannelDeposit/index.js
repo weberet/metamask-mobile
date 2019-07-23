@@ -227,7 +227,12 @@ class Deposit extends PureComponent {
 			return;
 		}
 		try {
-			const params = { depositAmount: this.state.amount };
+			let depositAmount = this.state.amount;
+			// Hack to deal with other locales
+			if (depositAmount.indexOf(',') !== -1) {
+				depositAmount = depositAmount.replace(',', '.');
+			}
+			const params = { depositAmount };
 			Logger.log('About to deposit', params);
 			this.setState({ depositing: true });
 			await PaymentChannelsClient.deposit(params);
