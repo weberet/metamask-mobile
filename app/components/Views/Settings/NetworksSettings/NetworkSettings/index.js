@@ -186,7 +186,7 @@ class NetworkSettings extends PureComponent {
 		}
 		const url = new URL(rpcUrl);
 		const privateConnection = isprivateConnection(url.hostname);
-		if (!privateConnection && url.protocol === 'http:') {
+		if (!privateConnection && (url.protocol !== 'http:' || url.protocol !== 'https:')) {
 			this.setState({ warningRpcUrl: strings('app_settings.invalid_rpc_prefix') });
 			return false;
 		}
